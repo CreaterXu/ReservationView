@@ -32,6 +32,9 @@ import static android.content.ContentValues.TAG;
 
 /**
  * Creater by CreaterXu at 2017/2/24 9:53
+ *实现波浪下载效果的Drawable
+ *startWaving 开始波浪效果
+ *cancelWaving 取消波浪效果
  */
 public class WaveLoadDrawable extends Drawable implements Animatable,ValueAnimator.AnimatorUpdateListener{
     private Paint mPaint;
