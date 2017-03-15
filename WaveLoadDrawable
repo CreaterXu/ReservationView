@@ -1,0 +1,271 @@
+package com.example.waveloaddrawable;
+
+import android.animation.Animator;
+import android.animation.ValueAnimator;
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.ColorFilter;
+import android.graphics.ColorMatrixColorFilter;
+import android.graphics.Matrix;
+import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.PixelFormat;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
+import android.graphics.Rect;
+import android.graphics.drawable.Animatable;
+import android.graphics.drawable.Animatable2;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.TransitionDrawable;
+import android.os.Build;
+import android.support.annotation.DrawableRes;
+import android.support.annotation.IdRes;
+import android.util.Log;
+import android.view.Choreographer;
+import android.view.animation.DecelerateInterpolator;
+import android.widget.ImageView;
+
+import static android.content.ContentValues.TAG;
+
+/**
+ * Creater by CreaterXu at 2017/2/24 9:53
+ */
+public class WaveLoadDrawable extends Drawable implements Animatable,ValueAnimator.AnimatorUpdateListener{
+    private Paint mPaint;
+    private int mWidth;
+    private int mHeight;
+    private int mWaveHeight = 30;//振幅
+    private int mWaveLength = 20;//波长
+
+    private int mWaveLevel=0;//波动高度
+    private int dx=0;//偏移量
+    private Drawable mDrawable;
+    private ColorFilter mColorFilter;
+
+
+    private ValueAnimator mAnimator;
+    private boolean mRunning=false;//动画运行标记位
+    private Bitmap mMaskBitmap; //阴影图
+
+
+    private Choreographer.FrameCallback mFrameCallback=new Choreographer.FrameCallback() {
+        @Override
+        public void doFrame(long frameTimeNanos) {
+            invalidateSelf();
+            if (mRunning) {
+                Choreographer.getInstance().postFrameCallback(this);
+            }
+        }
+    } ;
+    private static final String TAG="WaveLoadDrawable";
+    //指定图像混合模式 DST_IN 只显示重合部分的底色图像
+    private static final PorterDuffXfermode sXfermode = new PorterDuffXfermode(PorterDuff.Mode.DST_IN);
+
+    private static ColorFilter mGrayFilter = new ColorMatrixColorFilter(new float[]{
+            0.264F, 0.472F, 0.088F, 0, 0,
+            0.264F, 0.472F, 0.088F, 0, 0,
+            0.264F, 0.472F, 0.088F, 0, 0,
+            0, 0, 0, 1, 0
+    });
+
+    /**
+     * 开始波动
+     * */
+    public void startWaving(){
+        mAnimator.start();
+    }
+    /**
+     * 取消波动
+     *
+     * */
+    public void cancelWaving(){
+        mAnimator.cancel();
+        mAnimator=null;
+    }
+    public WaveLoadDrawable(Drawable drawable) {
+        init(drawable);
+    }
+
+    public WaveLoadDrawable(Context context, @DrawableRes int resId) {
+        Drawable drawable;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            drawable = context.getDrawable(resId);
+        } else {
+            drawable = context.getResources().getDrawable(resId);
+        }
+        init(drawable);
+
+    }
+
+
+    private void init(Drawable drawable) {
+        this.mDrawable = drawable;
+        mWidth = mDrawable.getIntrinsicWidth();
+        mHeight = mDrawable.getIntrinsicHeight();
+        mPaint = new Paint();
+        mPaint.setFilterBitmap(true);
+        mPaint.setColor(Color.BLACK);
+        if (mColorFilter == null)
+            mDrawable.setColorFilter(mGrayFilter);
+        else mDrawable.setColorFilter(mColorFilter);
+        mWaveLevel=mHeight/2;
+        mMaskBitmap=makeWaveBitmap(mWidth,mWaveLevel,mWaveLength,mWaveHeight,dx);//波长振幅都为50
+        mAnimator=getDefaultAnimator();
+        mAnimator.addUpdateListener(this);
+        setProcess(0);
+        start();
+    }
+
+
+
+    @Override
+    public void draw(Canvas canvas) {
+        if (mDrawable == null) return;
+        mDrawable.setColorFilter(mGrayFilter);
+        mDrawable.draw(canvas);
+        mPaint.setXfermode(sXfermode);
+        int saveLayoutCount= canvas.saveLayer(0, 0, mWidth, mHeight, null,
+                Canvas.ALL_SAVE_FLAG);
+            canvas.clipRect(0,mWaveLevel,mWidth,mHeight);
+            mDrawable.setColorFilter(null);
+            mDrawable.draw(canvas);
+            canvas.drawBitmap(mMaskBitmap,0,mWaveLevel,mPaint);
+        canvas.restoreToCount(saveLayoutCount);
+        mPaint.setXfermode(null);
+    }
+
+
+
+    /**
+     * 获取默认的值动画
+     *
+     * */
+    private ValueAnimator getDefaultAnimator(){
+        ValueAnimator animator=new ValueAnimator();
+        animator.setFloatValues(0,1);
+        animator.setInterpolator(new DecelerateInterpolator());
+        animator.setRepeatMode(ValueAnimator.RESTART);
+        animator.setRepeatCount(ValueAnimator.INFINITE);
+        animator.setDuration(5000);
+        return animator;
+    }
+    /**
+     * 产生阴影图
+     *@param waveHeight 振幅
+     * @param waveLength 波长
+     * @param width 图的宽度
+     *@param dx 偏移量
+     * */
+    private Bitmap makeWaveBitmap(int width, int height,int waveLength, int waveHeight,int dx){
+        Bitmap bm=Bitmap.createBitmap(width,height, Bitmap.Config.ARGB_8888);
+        Canvas canvas=new Canvas(bm);
+        Path path=new Path();
+        path.reset();
+        int originY=0;
+        int halfWaveLen=waveLength/2;
+        path.moveTo(-waveLength+dx,originY);
+        for (int i = -waveLength;i<=width+waveLength;i+=waveLength){
+            path.rQuadTo(halfWaveLen/2,-waveHeight,halfWaveLen,0);
+            path.rQuadTo(halfWaveLen/2,waveHeight,halfWaveLen,0);
+        }
+        path.lineTo(width,height);
+        path.lineTo(0,height);
+        path.close();
+        canvas.drawPath(path,mPaint);
+        return bm;
+    }
+
+    @Override
+    protected void onBoundsChange(Rect bounds) {
+        super.onBoundsChange(bounds);
+    }
+
+
+    /**
+     * 设置百分比  改变波动的比率
+     * @param percent
+     * */
+    private void setProcess(float percent){
+        mWaveLevel=(int)((1-percent)*mHeight);
+        dx=(int) (percent*mWaveLength);
+        if(mWidth!=0&&mWaveLevel!=0) {
+           mMaskBitmap = makeWaveBitmap(mWidth, mWaveLevel, mWaveLength, mWaveHeight, dx);
+        }
+    }
+    @Override
+    public void setBounds(int left, int top, int right, int bottom) {
+        super.setBounds(left, top, right, bottom);
+        mDrawable.setBounds(left, top, right, bottom);
+    }
+
+    @Override
+    public void setAlpha(int alpha) {
+        mDrawable.setAlpha(alpha);
+    }
+
+    @Override
+    public void setColorFilter(ColorFilter colorFilter) {
+        mColorFilter = colorFilter;
+        invalidateSelf();
+    }
+
+    /**
+     * 获取固有的高度，没有实现此方法自定义的Drawable就不会显示
+     * */
+    @Override
+    public int getIntrinsicHeight() {
+        if (mDrawable != null) {
+            return mDrawable.getIntrinsicHeight();
+        }
+        return super.getIntrinsicHeight();
+    }
+    /**
+     * 获取固有的宽度，没有实现此方法自定义的Drawable就不会显示
+     * */
+    @Override
+    public int getIntrinsicWidth() {
+        if (mDrawable != null) {
+            return mDrawable.getIntrinsicWidth();
+        }
+        return super.getIntrinsicWidth();
+    }
+
+    @Override
+    public int getOpacity() {
+        return PixelFormat.TRANSLUCENT;
+    }
+
+
+    /*-----Animatable 接口实现方法-----*/
+    @Override
+    public void start() {
+        Log.e(TAG, "start: ");
+        mRunning=true;
+        Choreographer.getInstance().postFrameCallback(mFrameCallback);
+        invalidateSelf();
+    }
+
+    @Override
+    public void stop() {
+        mRunning=false;
+        Choreographer.getInstance().removeFrameCallback(mFrameCallback);
+    }
+
+    @Override
+    public boolean isRunning() {
+        return mRunning;
+    }
+
+    /*--------UpateAnimation接口------------*/
+    @Override
+    public void onAnimationUpdate(ValueAnimator animation) {
+        float percent= animation.getAnimatedFraction();
+        if(mRunning) {
+            setProcess(percent);
+            invalidateSelf();
+        }
+    }
+}
