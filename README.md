@@ -18,3 +18,9 @@ setReservationTime()设置可预约的时间，接收以上日期格式字符串
   
   通过startWaving以及cancelWaving来控制波浪效果
   暂不支持xml定义，以及波浪的效果  
+  
+ 3.HornView
+ 效果：
+   类似微信语音播放的喇叭效果
+ 使用方法：
+  不支持xml定义
