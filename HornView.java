@@ -1,5 +1,7 @@
 package com.skystudio.myapplication;
 
+import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -8,9 +10,8 @@ import android.graphics.Path;
 import android.graphics.RectF;
 import android.support.annotation.Nullable;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.View;
-import android.widget.ImageView;
+import android.view.animation.LinearInterpolator;
 
 /**
  * 喇叭视图   存在两种状态  播放状态play（）   默认静止状态也可通过stop()
@@ -18,8 +19,8 @@ import android.widget.ImageView;
  */
 
 public class HornView extends View {
-    private int mWidth = 50;
-    private int mHeight = 50;//默认为50像素
+    private int mWidth = 100;
+    private int mHeight = 100;//默认为50像素
 
     private Paint mPaint;
 
@@ -30,7 +31,7 @@ public class HornView extends View {
 
     private boolean isPlaying = false;
 
-    private int i=3;
+    private int i=4;
 
     public HornView(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
@@ -52,7 +53,7 @@ public class HornView extends View {
             mHeight = h;
         }
         rectF.set(-mWidth, -mHeight / 2, mWidth, mHeight + mHeight / 2);
-        setMeasuredDimension(w, h);
+        setMeasuredDimension(mWidth, mHeight);
     }
 
     @Override
@@ -62,6 +63,7 @@ public class HornView extends View {
         mPaint.setAntiAlias(true);
         mPaint.setStyle(Paint.Style.STROKE);
         mPaint.setStrokeWidth(10);
+        mPaint.setStrokeCap(Paint.Cap.ROUND);
 
         if (!isPlaying) {
             rectF.set(-mWidth + mWidth / 4, (-mHeight / 2) + mWidth / 4, mWidth - mWidth / 4, mHeight + mHeight / 2 - mHeight / 4);
@@ -73,7 +75,10 @@ public class HornView extends View {
             rectF.set(-mWidth + mWidth / 4 * 3, (-mHeight / 2) + mWidth / 4 * 3, mWidth - mWidth / 4 * 3, mHeight + mHeight / 2 - mHeight / 4 * 3);
             path.addArc(rectF, -30, 60);
         }else {
-            if (i==3) {
+            if(i==4){
+                path.reset();
+            }
+            else if (i==3) {
                 path.reset();
                 rectF.set(-mWidth + mWidth / 4 * 3, (-mHeight / 2) + mWidth / 4 * 3, mWidth - mWidth / 4 * 3, mHeight + mHeight / 2 - mHeight / 4 * 3);
                 path.addArc(rectF, -30, 60);
@@ -100,28 +105,37 @@ public class HornView extends View {
         canvas.drawPath(path, mPaint);
     }
 
-    public void play() {
-        isPlaying=true;
-        new Thread(){
-            @Override
-            public void run() {
-                while (isPlaying){
-                    if(i==0)
-                        i=3;
-                    postInvalidate();
-                    try {
-                        sleep(1000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    i--;
-                }
-            }
-        }.start();
+
+    public void setI(int i){
+        this.i=i;
+        invalidate();
     }
 
+
+    private  ObjectAnimator animator;
+    /**
+     * 播放状态
+     *
+     * */
+    public void play() {
+        isPlaying=true;
+        animator=ObjectAnimator.ofInt(this,"i",4,1);
+        animator.setDuration(3000);
+        animator.setInterpolator(new LinearInterpolator());
+        animator.setRepeatCount(ValueAnimator.INFINITE);
+        animator.start();
+
+    }
+    /**
+     * 停止播放
+     *
+     * */
     public void stop(){
         isPlaying=false;
+        if (animator!=null){
+            animator.cancel();
+            animator=null;
+        }
         invalidate();
     }
 }
