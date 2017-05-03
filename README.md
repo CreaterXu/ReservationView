@@ -24,3 +24,9 @@ setReservationTime()设置可预约的时间，接收以上日期格式字符串
    类似微信语音播放的喇叭效果
  使用方法：
   不支持xml定义
+4.RefreshIndicator刷新指南对话框
+效果:一种类似的下载加载刷新指示框
+使用方法：setFlag（int ）三种Flag：
+    public static final int FLAG_STATE_REFRESHING;
+    public static final int FLAG_STATE_SUCCESS_END;
+    public static final int FLAG_STATE_FAILED_END;分别代表刷新中，刷新成功，刷新失败
