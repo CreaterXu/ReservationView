@@ -30,3 +30,6 @@ setReservationTime()设置可预约的时间，接收以上日期格式字符串
     public static final int FLAG_STATE_REFRESHING;
     public static final int FLAG_STATE_SUCCESS_END;
     public static final int FLAG_STATE_FAILED_END;分别代表刷新中，刷新成功，刷新失败
+   
+  
+5.动态的更新条形图ChartView
